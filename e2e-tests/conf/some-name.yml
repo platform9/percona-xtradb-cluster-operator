@@ -1,4 +1,4 @@
-apiVersion: pxc.percona.com/v1-6-0
+apiVersion: pxc.percona.com/v1
 kind: PerconaXtraDBCluster
 metadata:
   name: some-name
@@ -7,6 +7,7 @@ metadata:
   # annotations:
   #   percona.com/issue-vault-token: "true"
 spec:
+  crVersion: 1.8.0
   secretsName: my-cluster-secrets
   vaultSecretName: some-name-vault
   pause: false
