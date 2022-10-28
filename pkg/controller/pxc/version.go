@@ -7,8 +7,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	apiv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
-	"github.com/percona/percona-xtradb-cluster-operator/pkg/pxc/queries"
 	"github.com/pkg/errors"
 	"github.com/robfig/cron/v3"
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +15,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	k8sretry "k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	apiv1 "github.com/percona/percona-xtradb-cluster-operator/pkg/apis/pxc/v1"
+	"github.com/percona/percona-xtradb-cluster-operator/pkg/pxc/queries"
+	"github.com/percona/percona-xtradb-cluster-operator/version"
 )
 
 const (
@@ -336,5 +338,25 @@ func (r *ReconcilePerconaXtraDBCluster) fetchVersionFromPXC(cr *apiv1.PerconaXtr
 	if err != nil {
 		return errors.Wrap(err, "failed to update CR")
 	}
+	return nil
+}
+
+// setCRVersion sets operator version of PerconaXtraDBCluster.
+// The new (semver-matching) version is determined by the CR's crVersion field.
+// If the crVersion is an empty string, it sets the current operator version.
+func (r *ReconcilePerconaXtraDBCluster) setCRVersion(ctx context.Context, cr *apiv1.PerconaXtraDBCluster) error {
+	if len(cr.Spec.CRVersion) > 0 {
+		return nil
+	}
+
+	orig := cr.DeepCopy()
+	cr.Spec.CRVersion = version.Version
+
+	if err := r.client.Patch(ctx, cr, client.MergeFrom(orig)); err != nil {
+		return errors.Wrap(err, "patch CR")
+	}
+
+	r.logger(cr.Name, cr.Namespace).Info("Set CR version", "version", cr.Spec.CRVersion)
+
 	return nil
 }

@@ -3,9 +3,7 @@
 package v1
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
@@ -588,7 +586,6 @@ func (cr *PerconaXtraDBCluster) CheckNSetDefaults(serverVersion *version.ServerV
 		workloadSA = WorkloadSA
 	}
 
-	_ = cr.SetVersion()
 	err = cr.Validate()
 	if err != nil {
 		return errors.Wrap(err, "validate cr")
@@ -937,30 +934,6 @@ func setSafeDefaults(spec *PerconaXtraDBClusterSpec, log logr.Logger) {
 	}
 }
 
-// SetVersion sets the API version of a PXC resource.
-// The new (semver-matching) version is determined either by the CR's API version or an API version specified via the CR's fields.
-// If the CR's API version is an empty string and last-applied-configuration from k8s is empty, it returns current operator version.
-func (cr *PerconaXtraDBCluster) SetVersion() bool {
-	if len(cr.Spec.CRVersion) > 0 {
-		return false
-	}
-
-	apiVersion := version.Version
-
-	if lastCR, ok := cr.Annotations["kubectl.kubernetes.io/last-applied-configuration"]; ok {
-		var newCR PerconaXtraDBCluster
-		err := json.Unmarshal([]byte(lastCR), &newCR)
-		if err != nil {
-			log.Printf("failed to unmarshal cr: %v", err)
-		} else if len(newCR.APIVersion) > 0 {
-			apiVersion = strings.Replace(strings.TrimPrefix(newCR.APIVersion, "pxc.percona.com/v"), "-", ".", -1)
-		}
-	}
-
-	cr.Spec.CRVersion = apiVersion
-	return true
-}
-
 func (cr *PerconaXtraDBCluster) Version() *v.Version {
 	return v.Must(v.NewVersion(cr.Spec.CRVersion))
 }
@@ -968,10 +941,6 @@ func (cr *PerconaXtraDBCluster) Version() *v.Version {
 // CompareVersionWith compares given version to current version.
 // Returns -1, 0, or 1 if given version is smaller, equal, or larger than the current version, respectively.
 func (cr *PerconaXtraDBCluster) CompareVersionWith(ver string) int {
-	if len(cr.Spec.CRVersion) == 0 {
-		_ = cr.SetVersion()
-	}
-
 	return cr.Version().Compare(v.Must(v.NewVersion(ver)))
 }
 
