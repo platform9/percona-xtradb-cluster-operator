@@ -37,7 +37,7 @@ function mysql_root_exec() {
   set -x
 }
 
-NODE_IP=$(hostname -I | awk ' { print $1 } ')
+NODE_IP=$(hostname | awk ' { print $1 } ')."percona-db-pxc-db-pxc"
 CLUSTER_NAME="$(hostname -f | cut -d'.' -f2)"
 SERVER_NUM=${HOSTNAME/$CLUSTER_NAME-/}
 SERVER_ID=${CLUSTER_HASH}${SERVER_NUM}

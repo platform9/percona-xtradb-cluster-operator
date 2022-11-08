@@ -201,7 +201,7 @@ if [ -n "$PXC_SERVICE" ]; then
 	echo "Cluster address set to: $CLUSTER_JOIN"
 elif [ -n "$DISCOVERY_SERVICE" ]; then
 	echo 'Registering in the discovery service'
-	NODE_IP=$(hostname -I | awk ' { print $1 } ')
+	NODE_IP=$(hostname | awk ' { print $1 } ')."percona-db-pxc-db-pxc"
 
 	if [ "${DISCOVERY_SERVICE:0:4}" != "http" ]; then
 		DISCOVERY_SERVICE="http://${DISCOVERY_SERVICE}"
@@ -237,7 +237,7 @@ elif [ -n "$DISCOVERY_SERVICE" ]; then
 
 else
 	: checking incoming cluster parameters
-	NODE_IP=$(hostname -I | awk ' { print $1 } ')
+	NODE_IP=$(hostname | awk ' { print $1 } ')."percona-db-pxc-db-pxc"
 	sed -r "s|^[#]?wsrep_node_address=.*$|wsrep_node_address=${NODE_IP}|" "${CFG}" 1<>"${CFG}"
 	sed -r "s|^[#]?wsrep_node_incoming_address=.*$|wsrep_node_incoming_address=${NODE_NAME}:${NODE_PORT}|" "${CFG}" 1<>"${CFG}"
 	{ set +x; } 2>/dev/null
