@@ -64,7 +64,14 @@ if [ "${#PEERS[@]}" != 0 ]; then
 	DONOR_ADDRESS="$(printf '%s\n' "${PEERS[@]}" "${HOSTNAME}" | sort --version-sort | uniq | grep -v -- '-0$' | sed '$d' | tr '\n' ',' | sed 's/^,$//')"
 fi
 if [ "${#PEERS_FULL[@]}" != 0 ]; then
-	WSREP_CLUSTER_ADDRESS="$(printf '%s\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    # PF9 changes: IPv6 support in percona operator
+    # This assumes all the IPs are of same version, either IPv4 or IPv6
+    if [[ "${PEERS_FULL[0]}" =~ .*:.* ]]; then
+        echo "IPv6 Address found in one of WSREP_CLUSTER_ADDRESSes: ${PEERS_FULL[0]}"
+        WSREP_CLUSTER_ADDRESS="$(printf '[%s]:4567\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    else
+        WSREP_CLUSTER_ADDRESS="$(printf '%s\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    fi
 fi
 
 CFG=/etc/mysql/node.cnf
