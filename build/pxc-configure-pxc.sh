@@ -68,7 +68,7 @@ if [ "${#PEERS_FULL[@]}" != 0 ]; then
         echo "IPv6 Address found in one of WSREP_CLUSTER_ADDRESSes: ${PEERS_FULL[0]}"
         WSREP_CLUSTER_ADDRESS="$(printf '[%s]:4567\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
     else
-        WSREP_CLUSTER_ADDRESS="$(printf '%s:4567\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+        WSREP_CLUSTER_ADDRESS="$(printf '%s\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
     fi
 fi
 echo "Configuring WSREP_CLUSTER_ADDRESS: ${WSREP_CLUSTER_ADDRESS}"
