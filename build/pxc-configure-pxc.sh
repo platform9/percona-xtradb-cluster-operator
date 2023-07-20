@@ -62,9 +62,16 @@ if [ "${#PEERS[@]}" != 0 ]; then
     DONOR_ADDRESS="$(printf '%s\n' "${PEERS[@]}" "${HOSTNAME}" | sort --version-sort | uniq | grep -v -- '-0$' | sed '$d' | tr '\n' ',' | sed 's/^,$//')"
 fi
 if [ "${#PEERS_FULL[@]}" != 0 ]; then
-    WSREP_CLUSTER_ADDRESS="$(printf '%s\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    # PF9 changes: IPv6 support in percona operator
+    # This assumes all the IPs are of same version, either IPv4 or IPv6
+    if [[ "${PEERS_FULL[0]}" =~ .*:.* ]]; then
+        echo "IPv6 Address found in one of WSREP_CLUSTER_ADDRESSes: ${PEERS_FULL[0]}"
+        WSREP_CLUSTER_ADDRESS="$(printf '[%s]:4567\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    else
+        WSREP_CLUSTER_ADDRESS="$(printf '%s\n' "${PEERS_FULL[@]}" | sort --version-sort | tr '\n' ',' | sed 's/,$//')"
+    fi
 fi
-
+echo "Configuring WSREP_CLUSTER_ADDRESS: ${WSREP_CLUSTER_ADDRESS}"
 CFG=/etc/mysql/node.cnf
 MYSQL_VERSION=$(mysqld -V | awk '{print $3}' | awk -F'.' '{print $1"."$2}')
 if [ "$MYSQL_VERSION" == '8.0' ]; then
@@ -83,7 +90,18 @@ grep -E -q "^[#]?wsrep_node_incoming_address" "$CFG" || sed '/^\[mysqld\]/a wsre
 grep -E -q "^[#]?wsrep_provider_options" "$CFG" || sed '/^\[mysqld\]/a wsrep_provider_options="pc.weight=10"\n' ${CFG} 1<>${CFG}
 sed -r "s|^[#]?server_id=.*$|server_id=${SERVER_ID}|" ${CFG} 1<>${CFG}
 sed -r "s|^[#]?coredumper$|coredumper|" ${CFG} 1<>${CFG}
-sed -r "s|^[#]?wsrep_node_address=.*$|wsrep_node_address=${NODE_IP}|" ${CFG} 1<>${CFG}
+sed -r "s|^[#]?wsrep_node_address=.*$|wsrep_node_address=\"${NODE_IP}\"|" ${CFG} 1<>${CFG}
+# PF9 changes: IPv6 support in percona operator
+if [[ "$NODE_IP" =~ .*:.* ]]; then
+  echo "IPv6 Address found in NODE_IP: $NODE_IP, configuring wsrep_provider_options, wsrep_sst_receive_address and sockopt accordingly"
+  sed -r "s|^[#]?wsrep_provider_options=.*$|wsrep_provider_options=\"gmcast.listen_addr=tcp://[::]:4567; ist.recv_addr=[${NODE_IP}]:4568\"|" ${CFG} 1<>${CFG}
+  # add [mysqld]wsrep_sst_receive_address="[NODE_IP]:4444", this is needed by xbstream for IPv6 support
+  grep -E -q "^[#]?wsrep_sst_receive_address" "$CFG" || sed '/^\[mysqld\]/a wsrep_sst_receive_address=\n' ${CFG} 1<>${CFG}
+  sed -r "s|^[#]?wsrep_sst_receive_address=.*$|wsrep_sst_receive_address=\"[${NODE_IP}]:4444\"|" ${CFG} 1<>${CFG}
+  # add [sst]sockopt="pf=ipv6", this is needed by socat for IPv6 support
+  grep -E -q "^[#]?sockopt" "$CFG" || sed '/^\[sst\]/a sockopt=\n' ${CFG} 1<>${CFG}
+  sed -r "s|^[#]?sockopt=.*$|sockopt=\"pf=ipv6\"|" ${CFG} 1<>${CFG}
+fi
 sed -r "s|^[#]?wsrep_cluster_name=.*$|wsrep_cluster_name=${CLUSTER_NAME}|" ${CFG} 1<>${CFG}
 sed -r "s|^[#]?wsrep_sst_donor=.*$|wsrep_sst_donor=${DONOR_ADDRESS}|" ${CFG} 1<>${CFG}
 sed -r "s|^[#]?wsrep_cluster_address=.*$|wsrep_cluster_address=gcomm://${WSREP_CLUSTER_ADDRESS}|" ${CFG} 1<>${CFG}
