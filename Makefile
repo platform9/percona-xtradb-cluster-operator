@@ -5,6 +5,23 @@ VERSION ?= $(shell git rev-parse --abbrev-ref HEAD | sed -e 's^/^-^g; s^[.]^-^g;
 IMAGE ?= $(IMAGE_TAG_BASE):$(VERSION)
 DEPLOYDIR = ./deploy
 
+
+
+BUILDDIR=$(CURDIR)/build
+registry_url ?= quay.io
+image_name = ${registry_url}/platform9/percona-xtradb-cluster-operator
+DOCKERFILE?=$(BUILDDIR)/Dockerfile
+image_tag = v1.13.0-pf9-ipv6
+PF9_TAG=$(image_name):${image_tag}
+DOCKERARGS=
+ifdef HTTP_PROXY
+	DOCKERARGS += --build-arg http_proxy=$(HTTP_PROXY)
+endif
+ifdef HTTPS_PROXY
+	DOCKERARGS += --build-arg https_proxy=$(HTTPS_PROXY)
+endif
+
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -86,3 +103,11 @@ ENVTEST = $(shell pwd)/bin/setup-envtest
 envtest: ## Download envtest-setup locally if necessary.
 	$(call go-get-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest@latest)
 
+pf9-image: | $(BUILDDIR) ; $(info Building Docker image for pf9 Repo...) @ ## Build percona operator image
+	@docker build -t $(PF9_TAG) -f $(DOCKERFILE)  $(CURDIR) $(DOCKERARGS)
+	echo ${PF9_TAG} > $(BUILDDIR)/container-tag
+
+pf9-push: 
+	docker login
+	docker push $(PF9_TAG)\
+	&& docker rmi $(PF9_TAG)
