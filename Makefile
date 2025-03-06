@@ -12,7 +12,7 @@ BUILDDIR=$(CURDIR)/build
 registry_url ?= quay.io
 image_name = ${registry_url}/platform9/percona-xtradb-cluster-operator
 DOCKERFILE?=$(BUILDDIR)/Dockerfile
-image_tag = v1.13.0-pf9-ipv6
+image_tag = v1.16.1-pf9-ipv6
 PF9_TAG=$(image_name):${image_tag}
 DOCKERARGS=
 ifdef HTTP_PROXY
