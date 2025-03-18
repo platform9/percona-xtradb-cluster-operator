@@ -326,10 +326,12 @@ func (r *ReconcilePerconaXtraDBCluster) Reconcile(ctx context.Context, request r
 			log.Info("failed to ensure version, running with default", "error", err)
 		}
 	}
-	err = r.reconcilePersistentVolumes(ctx, o)
-	if err != nil {
-		return reconcile.Result{}, errors.Wrap(err, "reconcile persistent volumes")
-	}
+
+	// TODO: Commenting out as we currently don't use volume resize also kubevirt hostpath-csi filesystem mount issue needs to be addressed
+	// err = r.reconcilePersistentVolumes(ctx, o)
+	// if err != nil {
+	// 	return reconcile.Result{}, errors.Wrap(err, "reconcile persistent volumes")
+	// }
 
 	err = r.reconcileSSL(ctx, o)
 	if err != nil {
