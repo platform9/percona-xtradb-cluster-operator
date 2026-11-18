@@ -12,9 +12,9 @@ BUILDDIR=$(CURDIR)/build
 registry_url ?= quay.io
 image_name = ${registry_url}/platform9/percona-xtradb-cluster-operator
 DOCKERFILE?=$(BUILDDIR)/Dockerfile
-# Every build gets its own tag (base version + commit), so a branch build can never overwrite the tag
-# DUs already pull. Override with image_tag=... only for a deliberate release tag.
-image_tag ?= v1.16.1-pf9-ipv6-$(shell git rev-parse --short=8 HEAD)
+# Release tag for the PCD-9737 operator fix. pf9-push refuses to overwrite an existing tag, so bump
+# this (-v3, ...) for the next release, or pass image_tag=... for a test build.
+image_tag ?= v1.16.1-pf9-ipv6-v2
 PF9_TAG=$(image_name):${image_tag}
 DOCKERARGS=
 ifdef HTTP_PROXY
