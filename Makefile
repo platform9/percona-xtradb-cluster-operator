@@ -12,7 +12,9 @@ BUILDDIR=$(CURDIR)/build
 registry_url ?= quay.io
 image_name = ${registry_url}/platform9/percona-xtradb-cluster-operator
 DOCKERFILE?=$(BUILDDIR)/Dockerfile
-image_tag = v1.16.1-pf9-ipv6
+# Release tag for the PCD-9737 operator fix. pf9-push refuses to overwrite an existing tag, so bump
+# this (-v3, ...) for the next release, or pass image_tag=... for a test build.
+image_tag ?= v1.16.1-pf9-ipv6-v2
 PF9_TAG=$(image_name):${image_tag}
 DOCKERARGS=
 ifdef HTTP_PROXY
@@ -179,7 +181,10 @@ pf9-image: | $(BUILDDIR) ; $(info Building Docker image for pf9 Repo...) @ ## Bu
 	@docker build -t $(PF9_TAG) -f $(DOCKERFILE)  $(CURDIR) $(DOCKERARGS)
 	echo ${PF9_TAG} > $(BUILDDIR)/container-tag
 
-pf9-push: 
-	docker login
-	docker push $(PF9_TAG)\
-	&& docker rmi $(PF9_TAG)
+# Uses the docker credentials already stored for $(registry_url) on the build agents (pf9 user).
+# Refuses to overwrite an existing tag.
+pf9-push:
+	@if docker manifest inspect $(PF9_TAG) >/dev/null 2>&1; then \
+		echo "$(PF9_TAG) already exists on $(registry_url); refusing to overwrite it"; exit 1; \
+	fi
+	docker push $(PF9_TAG) && docker rmi $(PF9_TAG)

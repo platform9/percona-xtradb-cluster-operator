@@ -584,6 +584,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			)"
 			wsrep_start_position_opt="--wsrep_start_position=$start_pos"
 			seqno=$(echo "$start_pos" | awk -F':' '{print $NF}' || :)
+			if [[ -z ${uuid} ]]; then
+				uuid=$(echo "$start_pos" | awk -F':' '{print $1}' || :)
+			fi
 		else
 			# The server prints "..skipping position recovery.." if started without wsrep.
 			if grep 'skipping position recovery' "$wsrep_verbose_logfile"; then
@@ -651,7 +654,9 @@ if [ "$1" = 'mysqld' -a -z "$wantHelp" ]; then
 			echo 'If you have set spec.pxc.autoRecovery to false, run the following command to recover manually from this node:'
 			echo "kubectl -n $POD_NAMESPACE exec $(hostname) -c pxc -- sh -c 'kill -s USR1 1'"
 			#DO NOT CHANGE THE LINE BELOW. OUR AUTO-RECOVERY IS USING IT TO DETECT SEQNO OF CURRENT NODE. See K8SPXC-564
-			echo "#####################################################LAST_LINE:$NODE_NAME:$seqno:#####################################################"
+			# PCD-9737: the cluster state UUID is appended so the operator can refuse to auto-bootstrap
+			# when the pods carry different cluster histories (seqno alone is not comparable across them).
+			echo "#####################################################LAST_LINE:$NODE_NAME:$seqno:${uuid}:#####################################################"
 
 			for (( ; ; )); do
 				is_primary_exists=$(get_primary)
