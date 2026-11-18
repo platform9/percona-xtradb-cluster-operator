@@ -181,14 +181,9 @@ pf9-image: | $(BUILDDIR) ; $(info Building Docker image for pf9 Repo...) @ ## Bu
 	@docker build -t $(PF9_TAG) -f $(DOCKERFILE)  $(CURDIR) $(DOCKERARGS)
 	echo ${PF9_TAG} > $(BUILDDIR)/container-tag
 
-# Non-interactive: CI passes a quay robot account as QUAY_USER / QUAY_TOKEN. Without them, the
-# credentials already stored for $(registry_url) are used. Refuses to overwrite an existing tag.
+# Uses the docker credentials already stored for $(registry_url) on the build agents (pf9 user).
+# Refuses to overwrite an existing tag.
 pf9-push:
-	@if [ -n "$$QUAY_USER" ] && [ -n "$$QUAY_TOKEN" ]; then \
-		echo "$$QUAY_TOKEN" | docker login $(registry_url) -u "$$QUAY_USER" --password-stdin; \
-	else \
-		echo "QUAY_USER/QUAY_TOKEN not set, using the stored docker credentials for $(registry_url)"; \
-	fi
 	@if docker manifest inspect $(PF9_TAG) >/dev/null 2>&1; then \
 		echo "$(PF9_TAG) already exists on $(registry_url); refusing to overwrite it"; exit 1; \
 	fi
